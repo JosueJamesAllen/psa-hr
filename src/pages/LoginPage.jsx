@@ -1,6 +1,6 @@
 import { useAuth } from "../context/AuthContext";
 import bgPic from "../assets/background-pic.jfif";
-import psaLogo from "../assets/psa-logo.png";
+import psaLogo from "../assets/forshtsandgiggles.png";
 
 function GoogleIcon() {
   return (
