@@ -14,7 +14,7 @@ export default function Navbar() {
         to="/"
         className="font-heading font-semibold text-psa-blue dark:text-white"
       >
-        PSA Marinduque HR
+        PSA Marinduque - HRIS Portal
       </NavLink>
 
       <div className="flex gap-4">
