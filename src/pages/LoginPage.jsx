@@ -57,7 +57,7 @@ export default function LoginPage() {
               Marinduque Provincial Statistics Office
             </p>
             <p className="text-xs font-medium text-[#60a5fa]">
-              HR Leave &amp; Hiring Portal
+              Human Resource Information Systems
             </p>
           </div>
         </div>
