@@ -1,5 +1,5 @@
 import { useAuth } from "../context/AuthContext";
-import bgPic from "../assets/background-pic2.jfif";
+import bgPic from "../assets/background-pic.jfif";
 import psaLogo from "../assets/forshtsandgiggles.png";
 
 function GoogleIcon() {
