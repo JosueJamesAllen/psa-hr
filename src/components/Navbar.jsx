@@ -10,9 +10,12 @@ export default function Navbar() {
 
   return (
     <nav className="flex items-center gap-6 border-b border-slate-200 px-5 py-3 dark:border-slate-800">
-      <span className="font-heading font-semibold text-psa-blue dark:text-white">
+      <NavLink
+        to="/"
+        className="font-heading font-semibold text-psa-blue dark:text-white"
+      >
         PSA Marinduque HR
-      </span>
+      </NavLink>
 
       <div className="flex gap-4">
         <NavLink to="/leaves" className={tabClass}>
