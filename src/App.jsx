@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
-import LandingPage from "./pages/LandingPage";
+import LoginPage from "./pages/LoginPage";
 import Leaves from "./pages/Leaves";
 import Hiring from "./pages/Hiring";
 
@@ -13,7 +13,7 @@ function AppContent() {
   }
 
   if (!session) {
-    return <LandingPage />;
+    return <LoginPage />;
   }
 
   return (
