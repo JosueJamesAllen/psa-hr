@@ -7,6 +7,7 @@ import Leaves from "./pages/Leaves";
 import ReviewQueue from "./pages/ReviewQueue";
 import Attendance from "./pages/Attendance";
 import LeaveCard from "./pages/LeaveCard";
+import Accounts from "./pages/Accounts";
 import Hiring from "./pages/Hiring";
 
 function AppContent() {
@@ -30,6 +31,7 @@ function AppContent() {
           <Route path="/review" element={<ReviewQueue />} />
           <Route path="/attendance" element={<Attendance />} />
           <Route path="/card" element={<LeaveCard />} />
+          <Route path="/accounts" element={<Accounts />} />
           <Route path="/hiring" element={<Hiring />} />
         </Routes>
       </main>

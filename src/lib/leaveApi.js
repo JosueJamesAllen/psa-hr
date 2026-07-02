@@ -9,6 +9,8 @@ import {
   leaveTypes,
   leaveBalances,
   leaveApplications,
+  accountRequests,
+  units,
 } from "../mock/data";
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -17,6 +19,7 @@ const round3 = (n) => Math.round((n + Number.EPSILON) * 1000) / 1000;
 // Session stores.
 let applications = clone(leaveApplications);
 let attendanceEvents = [];
+let accounts = clone(accountRequests);
 
 const TERMINAL = ["approved", "disapproved", "cancelled"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -157,4 +160,28 @@ export async function postAttendanceEvent(payload) {
 }
 export async function listAttendanceEvents(employeeId) {
   return clone(attendanceEvents.filter((e) => e.employeeId === employeeId));
+}
+
+// ---------- account approval (admin) ----------
+export async function listUnits() {
+  return clone(units);
+}
+export async function listPendingAccounts() {
+  return clone(accounts.filter((a) => a.status === "pending"));
+}
+export async function listProcessedAccounts() {
+  return clone(accounts.filter((a) => a.status !== "pending"));
+}
+function patchAccount(id, changes) {
+  const i = accounts.findIndex((a) => a.id === id);
+  if (i === -1) throw new Error(`Account not found: ${id}`);
+  accounts[i] = { ...accounts[i], ...changes };
+  return clone(accounts[i]);
+}
+/** Approve a sign-in and record the employee setup details. */
+export async function approveAccount(id, details) {
+  return patchAccount(id, { status: "approved", ...details, decidedAt: new Date().toISOString() });
+}
+export async function rejectAccount(id, reason = "") {
+  return patchAccount(id, { status: "rejected", rejectionReason: reason, decidedAt: new Date().toISOString() });
 }

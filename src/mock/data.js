@@ -56,3 +56,13 @@ export const leaveApplications = [
   { id: "a5", applicantId: "e_css", applicantName: "Gemma N. Opis", position: "Chief Statistical Specialist", empClass: "regular", applicantSeat: "css", leaveTypeCode: "VL", leaveTypeName: "Vacation Leave", category: "vacation", isPaid: true, chain: "ao1_css", approverExternal: true, start: "2026-06-29", end: "2026-06-30", workingDays: 2, filingDate: "2026-06-16", status: "forwarded_ro", balance: 181.301 },
   { id: "a6", applicantId: "e_ao1", applicantName: "Olivia J. Jasmin", position: "Administrative Officer I", empClass: "regular", applicantSeat: "ao1_hrmo", leaveTypeCode: "SL", leaveTypeName: "Sick Leave", category: "sick", isPaid: true, chain: "ao1_css", approverExternal: false, start: "2026-06-09", end: "2026-06-09", workingDays: 1, filingDate: "2026-06-10", status: "credits_certified", balance: 318 },
 ];
+
+// Org units (drives the unit picker on account approval + per-unit analytics later).
+export const units = ["Administrative", "Statistical", "Civil Registration", "National ID"];
+
+// New Google sign-ins awaiting admin setup (account_status = 'pending').
+export const accountRequests = [
+  { id: "r1", name: "Jasmine T. Rosales", email: "jrosales@psa.gov.ph", requestedAt: "2026-06-14", status: "pending" },
+  { id: "r2", name: "Mark Anthony D. Villaruel", email: "mavillaruel@psa.gov.ph", requestedAt: "2026-06-16", status: "pending" },
+  { id: "r3", name: "Ferdinand G. Sarmiento", email: "fsarmiento@psa.gov.ph", requestedAt: "2026-06-17", status: "pending" },
+];

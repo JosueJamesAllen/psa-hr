@@ -30,6 +30,9 @@ export default function Navbar() {
         <NavLink to="/card" className={tabClass}>
           Leave card
         </NavLink>
+        <NavLink to="/accounts" className={tabClass}>
+          Accounts
+        </NavLink>
         <NavLink to="/hiring" className={tabClass}>
           Hiring
         </NavLink>
