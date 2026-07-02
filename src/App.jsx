@@ -4,6 +4,7 @@ import Navbar from "./components/Navbar";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import Leaves from "./pages/Leaves";
+import ReviewQueue from "./pages/ReviewQueue";
 import Hiring from "./pages/Hiring";
 
 function AppContent() {
@@ -24,6 +25,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/leaves" element={<Leaves />} />
+          <Route path="/review" element={<ReviewQueue />} />
           <Route path="/hiring" element={<Hiring />} />
         </Routes>
       </main>

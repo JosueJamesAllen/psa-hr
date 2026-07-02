@@ -118,12 +118,21 @@ export default function Leaves() {
     setSubmitting(true);
     try {
       const saved = await submitLeaveApplication({
-        employeeId: applicant.id,
+        applicantId: applicant.id,
         applicantName: applicant.name,
+        position: applicant.position,
+        empClass: applicant.empClass,
+        applicantSeat: applicant.seat,
         leaveTypeCode: leaveType.code,
         leaveTypeName: leaveType.name,
-        start, end, workingDays, filingDate, purpose,
+        category: leaveType.category,
+        isPaid: leaveType.isPaid,
+        chain: leaveType.routing,
         approverExternal: routing.approverExternal,
+        start, end, workingDays, filingDate, purpose,
+        balance: credit?.kind === "credit" ? credit.balance : undefined,
+        deduction: credit?.kind === "deduction" ? credit.amount : undefined,
+        deductionHalf: credit?.kind === "deduction" ? credit.half : undefined,
       });
       setFiled((prev) => [saved, ...prev]);
       setPurpose("");

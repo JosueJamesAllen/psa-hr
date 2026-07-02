@@ -45,3 +45,14 @@ export const leaveBalances = [
   { employeeId: "e_cos_m", category: "wellness", balance: 1 },
   { employeeId: "e_jo_d", category: "wellness", balance: 1 },
 ];
+
+// In-flight applications for the review queue. Each sits at a different stage so
+// every signatory seat has something to act on (incl. a CSS leave forwarded to the RO).
+export const leaveApplications = [
+  { id: "a1", applicantId: "e_reg", applicantName: "Sonny Jr. R. De La Cruz", position: "Statistical Analyst", empClass: "regular", applicantSeat: null, leaveTypeCode: "VL", leaveTypeName: "Vacation Leave", category: "vacation", isPaid: true, chain: "ao1_css", approverExternal: false, start: "2026-06-22", end: "2026-06-24", workingDays: 3, filingDate: "2026-06-10", status: "submitted", balance: 25.215 },
+  { id: "a2", applicantId: "e_reg", applicantName: "Sonny Jr. R. De La Cruz", position: "Statistical Analyst", empClass: "regular", applicantSeat: null, leaveTypeCode: "SL", leaveTypeName: "Sick Leave", category: "sick", isPaid: true, chain: "ao1_css", approverExternal: false, start: "2026-06-02", end: "2026-06-03", workingDays: 2, filingDate: "2026-06-04", status: "credits_certified", balance: 26.999 },
+  { id: "a3", applicantId: "e_jo_d", applicantName: "Rocco V. Llante", position: "Driver (JO)", empClass: "cosw", applicantSeat: null, leaveTypeCode: "VL_COSW", leaveTypeName: "Vacation Leave \u2014 unpaid (COSW)", category: "vacation", isPaid: false, chain: "sss_css", approverExternal: false, start: "2026-06-25", end: "2026-06-26", workingDays: 2, filingDate: "2026-06-15", status: "submitted", deduction: 1530.28, deductionHalf: "second_half" },
+  { id: "a4", applicantId: "e_cos_m", applicantName: "Kane Carol T. Matibag-Pajanustan", position: "Statistical Analyst (COS)", empClass: "cosw", applicantSeat: null, leaveTypeCode: "VL_COSW", leaveTypeName: "Vacation Leave \u2014 unpaid (COSW)", category: "vacation", isPaid: false, chain: "sss_css", approverExternal: false, start: "2026-06-18", end: "2026-06-19", workingDays: 2, filingDate: "2026-06-05", status: "recommended", deduction: 2729.45, deductionHalf: "second_half" },
+  { id: "a5", applicantId: "e_css", applicantName: "Gemma N. Opis", position: "Chief Statistical Specialist", empClass: "regular", applicantSeat: "css", leaveTypeCode: "VL", leaveTypeName: "Vacation Leave", category: "vacation", isPaid: true, chain: "ao1_css", approverExternal: true, start: "2026-06-29", end: "2026-06-30", workingDays: 2, filingDate: "2026-06-16", status: "forwarded_ro", balance: 181.301 },
+  { id: "a6", applicantId: "e_ao1", applicantName: "Olivia J. Jasmin", position: "Administrative Officer I", empClass: "regular", applicantSeat: "ao1_hrmo", leaveTypeCode: "SL", leaveTypeName: "Sick Leave", category: "sick", isPaid: true, chain: "ao1_css", approverExternal: false, start: "2026-06-09", end: "2026-06-09", workingDays: 1, filingDate: "2026-06-10", status: "credits_certified", balance: 318 },
+];
