@@ -52,7 +52,7 @@ export default function ReviewQueue() {
           <select
             value={seat}
             onChange={(e) => setSeat(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 focus:border-psa-blue focus:outline-none focus:ring-2 focus:ring-psa-blue/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="ui-input px-3 py-1.5 text-sm"
           >
             {REVIEW_SEATS.map((s) => (
               <option key={s} value={s}>
@@ -98,7 +98,7 @@ function ApplicationCard({ app, seat, seats, busy, onCertify, onRecommend, onDec
   const [channel, setChannel] = useState("email");
 
   return (
-    <li className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+    <li className="ui-card p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-semibold text-slate-900 dark:text-white">{app.applicantName}</p>
@@ -150,7 +150,7 @@ function ApplicationCard({ app, seat, seats, busy, onCertify, onRecommend, onDec
             <select
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
-              className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              className="ui-input px-2 py-1 text-sm"
             >
               <option value="email">Email (e-signed)</option>
               <option value="courier">Courier</option>

@@ -77,7 +77,7 @@ export default function Attendance() {
   };
 
   const fieldClass =
-    "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-psa-blue focus:outline-none focus:ring-2 focus:ring-psa-blue/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
+    "ui-input mt-1 w-full px-3 py-2 text-sm";
   const labelClass = "text-sm font-medium text-slate-700 dark:text-slate-300";
 
   if (!employee) return <div className="p-6 text-sm text-slate-500 dark:text-slate-400">Loading…</div>;
@@ -91,7 +91,7 @@ export default function Attendance() {
         </div>
         <label className="text-sm">
           <span className="mr-2 text-slate-500 dark:text-slate-400">Employee</span>
-          <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 focus:border-psa-blue focus:outline-none focus:ring-2 focus:ring-psa-blue/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+          <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} className="ui-input px-3 py-1.5 text-sm">
             {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
           </select>
         </label>
@@ -99,7 +99,7 @@ export default function Attendance() {
 
       {/* current balances */}
       {isAccruing && balances && (
-        <div className="mb-6 flex gap-6 rounded-xl bg-slate-50 px-5 py-3 text-sm dark:bg-slate-800/40">
+        <div className="mb-6 flex gap-6 ui-card-soft px-5 py-3 text-sm">
           <span className="text-slate-500 dark:text-slate-400">Current credits</span>
           <span className="font-medium text-slate-800 dark:text-slate-200">VL {fmt(balances.vacation ?? 0)}</span>
           <span className="font-medium text-slate-800 dark:text-slate-200">SL {fmt(balances.sick ?? 0)}</span>
@@ -107,7 +107,7 @@ export default function Attendance() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
-        <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+        <div className="space-y-5 ui-card p-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="type" className={labelClass}>Type</label>
@@ -134,7 +134,7 @@ export default function Attendance() {
             </div>
           )}
           {unit === "none" && (
-            <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-500 dark:bg-slate-800/40 dark:text-slate-400">
+            <p className="ui-card-soft px-3 py-2 text-sm text-slate-500 dark:text-slate-400">
               A personnel pass is logged only; it doesn't draw against leave credits.
             </p>
           )}
@@ -167,7 +167,7 @@ export default function Attendance() {
 
         {/* live conversion */}
         <aside className="lg:sticky lg:top-6 lg:self-start">
-          <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/40">
+          <div className="space-y-3 ui-card-soft p-5">
             <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">This entry</h2>
             <div className="flex items-baseline justify-between">
               <span className="text-sm text-slate-500 dark:text-slate-400">

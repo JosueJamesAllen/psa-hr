@@ -11,39 +11,70 @@
   --color-psa-gold: #fcd116;
 }
 
-body {
-  font-family: var(--font-body);
+body { font-family: var(--font-body); }
+
+/* ---- app surfaces (light + dark), matching the Office Supplies Tracker ---- */
+
+/* Content background: soft blue-tinted light gradient / flat deep navy in dark. */
+.app-content { background: linear-gradient(180deg, #f8fafc 0%, #eef3fc 100%); min-height: 100vh; }
+.dark .app-content { background: #0a0f1e; }
+
+/* Primary card. */
+.ui-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.dark .ui-card {
+  background: #0f1626;
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: none;
 }
 
-/* Frosted glass surface — only looks frosted over a photo/gradient, since
-   backdrop-filter blurs whatever sits behind it. The translucent background
-   doubles as the fallback where backdrop-filter isn't supported. */
+/* Nested / secondary surface. */
+.ui-card-soft {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+}
+.dark .ui-card-soft {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Form control. */
+.ui-input {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  border-radius: 0.6rem;
+}
+.ui-input::placeholder { color: #94a3b8; }
+.ui-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18); }
+.dark .ui-input {
+  background: #0b1222;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  color-scheme: dark;
+}
+
+/* ---- login-only frosted card (unchanged) ---- */
 .glass-card {
-  background: linear-gradient(
-    145deg,
-    rgba(28, 40, 66, 0.55) 0%,
-    rgba(13, 20, 40, 0.47) 100%
-  );
+  background: linear-gradient(145deg, rgba(28, 40, 66, 0.55) 0%, rgba(13, 20, 40, 0.47) 100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(22px) saturate(170%);
   -webkit-backdrop-filter: blur(22px) saturate(170%);
-  box-shadow:
-    0 0 0 1px rgba(56, 189, 248, 0.09),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 24px 52px -18px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.09), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 24px 52px -18px rgba(0, 0, 0, 0.7);
   border-radius: 1rem;
   padding: 2rem;
 }
-
-/* Light variant for in-app surfaces on a light background. */
 .glass-card-light {
   background: rgba(255, 255, 255, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(22px) saturate(170%);
   -webkit-backdrop-filter: blur(22px) saturate(170%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 4px 20px -4px rgba(30, 80, 160, 0.09);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 4px 20px -4px rgba(30, 80, 160, 0.09);
   border-radius: 1rem;
   padding: 2rem;
 }

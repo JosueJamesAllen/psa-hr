@@ -103,11 +103,11 @@ function RequestCard({ req, units, onDone }) {
   };
   const reject = async () => { setBusy(true); try { await rejectAccount(req.id); onDone(); } finally { setBusy(false); } };
 
-  const field = "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-psa-blue focus:outline-none focus:ring-2 focus:ring-psa-blue/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
+  const field = "ui-input mt-1 w-full px-3 py-2 text-sm";
   const label = "text-xs font-medium text-slate-500 dark:text-slate-400";
 
   return (
-    <li className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+    <li className="ui-card p-5">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <p className="font-semibold text-slate-900 dark:text-white">{req.name}</p>

@@ -44,7 +44,7 @@ export default function LeaveCard() {
         </div>
         <label className="text-sm">
           <span className="mr-2 text-slate-500 dark:text-slate-400">Employee</span>
-          <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 focus:border-psa-blue focus:outline-none focus:ring-2 focus:ring-psa-blue/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+          <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} className="ui-input px-3 py-1.5 text-sm">
             {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
           </select>
         </label>
@@ -53,14 +53,14 @@ export default function LeaveCard() {
       {rows === undefined ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
       ) : rows === null ? (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300">
+        <div className="ui-card-soft p-6 text-sm text-slate-600 dark:text-slate-300">
           Contract workers don't keep a vacation/sick leave card — those leaves are unpaid and deducted from wages.
           {balances?.wellness != null && (
             <span className="mt-2 block font-medium text-slate-800 dark:text-slate-200">Wellness leave available this quarter: {fmt(balances.wellness)} day(s).</span>
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
+        <div className="ui-card overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="bg-slate-50 text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">

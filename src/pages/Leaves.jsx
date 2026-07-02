@@ -142,7 +142,7 @@ export default function Leaves() {
   };
 
   const fieldClass =
-    "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-psa-blue focus:outline-none focus:ring-2 focus:ring-psa-blue/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
+    "ui-input mt-1 w-full px-3 py-2 text-sm";
   const labelClass = "text-sm font-medium text-slate-700 dark:text-slate-300";
 
   if (!bootstrap || !applicant || !typeData || !leaveType) {
@@ -159,7 +159,7 @@ export default function Leaves() {
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
-        <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+        <form onSubmit={handleSubmit} className="space-y-5 ui-card p-6">
           <div>
             <label htmlFor="applicant" className={labelClass}>
               Filing as <span className="font-normal text-slate-400">(demo)</span>
@@ -215,7 +215,7 @@ export default function Leaves() {
         </form>
 
         <aside className="lg:sticky lg:top-6 lg:self-start">
-          <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/40">
+          <div className="space-y-4 ui-card-soft p-5">
             <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Summary</h2>
 
             <Row label="Working days" value={workingDays > 0 ? `${workingDays}` : "\u2014"} />
