@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Leaves from "./pages/Leaves";
 import ReviewQueue from "./pages/ReviewQueue";
 import Attendance from "./pages/Attendance";
+import LeaveCard from "./pages/LeaveCard";
 import Hiring from "./pages/Hiring";
 
 function AppContent() {
@@ -28,6 +29,7 @@ function AppContent() {
           <Route path="/leaves" element={<Leaves />} />
           <Route path="/review" element={<ReviewQueue />} />
           <Route path="/attendance" element={<Attendance />} />
+          <Route path="/card" element={<LeaveCard />} />
           <Route path="/hiring" element={<Hiring />} />
         </Routes>
       </main>

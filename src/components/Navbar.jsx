@@ -24,6 +24,12 @@ export default function Navbar() {
         <NavLink to="/review" className={tabClass}>
           Review
         </NavLink>
+        <NavLink to="/attendance" className={tabClass}>
+          Attendance
+        </NavLink>
+        <NavLink to="/card" className={tabClass}>
+          Leave card
+        </NavLink>
         <NavLink to="/hiring" className={tabClass}>
           Hiring
         </NavLink>
