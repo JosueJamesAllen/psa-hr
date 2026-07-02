@@ -5,6 +5,7 @@ import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import Leaves from "./pages/Leaves";
 import ReviewQueue from "./pages/ReviewQueue";
+import Attendance from "./pages/Attendance";
 import Hiring from "./pages/Hiring";
 
 function AppContent() {
@@ -26,6 +27,7 @@ function AppContent() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/leaves" element={<Leaves />} />
           <Route path="/review" element={<ReviewQueue />} />
+          <Route path="/attendance" element={<Attendance />} />
           <Route path="/hiring" element={<Hiring />} />
         </Routes>
       </main>

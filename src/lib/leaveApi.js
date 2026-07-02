@@ -12,8 +12,10 @@ import {
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
-// Mutable session copy so review actions and new filings persist while the app runs.
+// Mutable session copies so review actions, filings, and attendance charges persist while the app runs.
 let applications = clone(leaveApplications);
+let balancesStore = clone(leaveBalances);
+let attendanceEvents = [];
 
 const TERMINAL = ["approved", "disapproved", "cancelled"];
 
@@ -43,7 +45,7 @@ export async function listLeaveTypes(empClass) {
   return clone(leaveTypes.filter((t) => t.appliesTo.includes(empClass)));
 }
 export async function getBalances(employeeId) {
-  return leaveBalances
+  return balancesStore
     .filter((b) => b.employeeId === employeeId)
     .reduce((acc, b) => ({ ...acc, [b.category]: b.balance }), {});
 }
@@ -103,4 +105,31 @@ export async function submitLeaveApplication(payload) {
   const saved = { id: crypto.randomUUID(), ...payload, status: "submitted" };
   applications = [saved, ...applications];
   return clone(saved);
+}
+
+// ---------- attendance encoding (admin) ----------
+/** Reduce an employee's credit balance for a category (no-op if the row is absent). */
+function chargeBalance(employeeId, category, days) {
+  const row = balancesStore.find((b) => b.employeeId === employeeId && b.category === category);
+  if (row) row.balance = Math.round((row.balance - days) * 1000) / 1000;
+}
+
+/**
+ * Record a personnel pass / tardiness / undertime / absence. When it's charged
+ * "with pay", the equivalent days are deducted from the chosen VL/SL balance.
+ */
+export async function postAttendanceEvent(payload) {
+  const saved = { id: crypto.randomUUID(), ...payload };
+  if (payload.withPay && payload.chargeCategory && payload.equivalentDays > 0) {
+    chargeBalance(payload.employeeId, payload.chargeCategory, payload.equivalentDays);
+    const row = balancesStore.find((b) => b.employeeId === payload.employeeId && b.category === payload.chargeCategory);
+    saved.balanceAfter = row ? row.balance : null;
+  }
+  attendanceEvents = [saved, ...attendanceEvents];
+  return clone(saved);
+}
+
+/** Attendance entries recorded this session for an employee (newest first). */
+export async function listAttendanceEvents(employeeId) {
+  return clone(attendanceEvents.filter((e) => e.employeeId === employeeId));
 }

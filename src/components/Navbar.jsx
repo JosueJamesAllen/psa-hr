@@ -21,6 +21,9 @@ export default function Navbar() {
         <NavLink to="/leaves" className={tabClass}>
           Leaves
         </NavLink>
+        <NavLink to="/review" className={tabClass}>
+          Review
+        </NavLink>
         <NavLink to="/hiring" className={tabClass}>
           Hiring
         </NavLink>
