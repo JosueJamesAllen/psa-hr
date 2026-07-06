@@ -85,7 +85,7 @@ function RequestCard({ req, units, onDone }) {
   const approve = async () => {
     setBusy(true);
     try {
-      await approveAccount(req, {
+      await approveAccount(req.id, {
         employeeIdNo: employeeIdNo.trim(),
         empClass,
         coswSub: isCosw ? coswSub : null,

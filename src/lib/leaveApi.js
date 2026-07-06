@@ -1,215 +1,187 @@
-// Live data access against Supabase. RLS enforces who can see/do what; these
-// functions just shape rows to the app's camelCase objects. Mirrors the former
-// mock API so the pages needed only their "current user" wiring changed.
-import { supabase } from "./supabaseClient";
+// Data access for the leave module. Every function is async and returns the
+// same shape the real Supabase queries will, so swapping the internals later
+// won't touch any component. Review actions, filings, and attendance charges
+// persist in session stores; balances derive from the seed minus those charges.
+import {
+  employees,
+  signatorySeats,
+  signatoryUnavailability,
+  leaveTypes,
+  leaveBalances,
+  leaveApplications,
+  accountRequests,
+  units,
+} from "../mock/data";
 
-const fullName = (r) => [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(" ");
+const clone = (v) => JSON.parse(JSON.stringify(v));
 const round3 = (n) => Math.round((n + Number.EPSILON) * 1000) / 1000;
 
-function mapEmployee(r) {
-  return {
-    id: r.id, employeeIdNo: r.employee_id_no, name: fullName(r),
-    firstName: r.first_name, lastName: r.last_name, middleName: r.middle_name,
-    empClass: r.emp_class, coswSub: r.cosw_sub, position: r.position, unitId: r.unit_id,
-    payBasis: r.emp_class === "cosw" ? (r.daily_wage != null ? "daily" : "monthly") : "monthly",
-    monthlySalary: r.salary, dailyWage: r.daily_wage, role: r.app_role, email: r.email,
-  };
-}
-function mapLeaveType(r) {
-  return {
-    id: r.id, code: r.code, name: r.name, category: r.category, appliesTo: r.applies_to,
-    isPaid: r.is_paid, requiresCredits: r.requires_credits, routing: r.routing,
-    advanceMinDays: r.advance_min_days, advanceMaxDays: r.advance_max_days,
-  };
+// Session stores.
+let applications = clone(leaveApplications);
+let attendanceEvents = [];
+let accounts = clone(accountRequests);
+
+const TERMINAL = ["approved", "disapproved", "cancelled"];
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTHLY_ACCRUAL = 1.25;
+
+/** Which seat must act next on an application (null once terminal). */
+export function pendingSeat(app) {
+  switch (app.status) {
+    case "submitted":
+      return app.chain === "sss_css" ? "sss" : "ao1_hrmo";
+    case "credits_certified":
+    case "recommended":
+      return "css";
+    case "forwarded_ro":
+      return "ao1_hrmo";
+    default:
+      return null;
+  }
 }
 
-// ---------- employees ----------
+// ---------- reads ----------
 export async function listEmployees() {
-  const { data, error } = await supabase.from("employees").select("*")
-    .eq("account_status", "approved").order("last_name");
-  if (error) throw error;
-  return data.map(mapEmployee);
+  return clone(employees);
 }
 export async function getEmployee(id) {
-  const { data, error } = await supabase.from("employees").select("*").eq("id", id).single();
-  if (error) throw error;
-  return mapEmployee(data);
+  return clone(employees.find((e) => e.id === id) ?? null);
 }
-
-// ---------- reference ----------
 export async function listLeaveTypes(empClass) {
-  const { data, error } = await supabase.from("leave_types").select("*")
-    .contains("applies_to", [empClass]).eq("active", true).order("code");
-  if (error) throw error;
-  return data.map(mapLeaveType);
+  return clone(leaveTypes.filter((t) => t.appliesTo.includes(empClass)));
 }
 export async function getSignatorySeats() {
-  const { data, error } = await supabase.from("signatory_seats")
-    .select("seat, holder_name, is_external, employee_id").is("effective_to", null);
-  if (error) throw error;
-  const seats = {};
-  for (const s of data) {
-    seats[s.seat] = { seat: s.seat, external: s.is_external, id: s.employee_id, name: s.holder_name };
-  }
-  return seats;
+  return clone(signatorySeats);
 }
 export async function getSignatoryUnavailability() {
-  const { data, error } = await supabase.from("signatory_unavailability")
-    .select("signatory_id, start_date, end_date");
-  if (error) return [];
-  return (data ?? []).map((u) => ({ signatoryId: u.signatory_id, start: u.start_date, end: u.end_date }));
+  return clone(signatoryUnavailability);
 }
 
-// ---------- balances & leave card ----------
+// original (pre-charge) balances for an employee, as { category: balance }
+function origBalances(employeeId) {
+  return leaveBalances
+    .filter((b) => b.employeeId === employeeId)
+    .reduce((acc, b) => ({ ...acc, [b.category]: b.balance }), {});
+}
+// with-pay attendance charges recorded this session, optionally scoped to a month
+function chargesFor(employeeId, category, { year = null, month = null } = {}) {
+  return attendanceEvents
+    .filter((e) => e.employeeId === employeeId && e.withPay && e.chargeCategory === category)
+    .filter((e) => year == null || new Date(`${e.date}T00:00:00`).getFullYear() === year)
+    .filter((e) => month == null || new Date(`${e.date}T00:00:00`).getMonth() === month)
+    .reduce((sum, e) => sum + (e.equivalentDays || 0), 0);
+}
+
+/** Current credit balances: seed minus with-pay attendance charges. */
 export async function getBalances(employeeId) {
-  const { data, error } = await supabase.from("leave_balances")
-    .select("category, balance").eq("employee_id", employeeId);
-  if (error) throw error;
-  return data.reduce((acc, b) => ({ ...acc, [b.category]: Number(b.balance) }), {});
+  const orig = origBalances(employeeId);
+  const out = { ...orig };
+  for (const cat of ["vacation", "sick"]) {
+    if (orig[cat] != null) out[cat] = round3(orig[cat] - chargesFor(employeeId, cat));
+  }
+  return out;
 }
 
+/**
+ * A regular/contractual employee's leave card for the year: Balance Forwarded +
+ * one row per elapsed month, VL/SL earned/charged/balance, matching the paper card.
+ * Returns null for COSW (no VL/SL card).
+ */
 export async function getLeaveCard(employeeId, year) {
-  const balances = await getBalances(employeeId);
-  if (balances.vacation == null && balances.sick == null) return null; // COSW: no VL/SL card
-
-  const { data: events } = await supabase.from("attendance_events")
-    .select("event_date, equivalent_days, charge_category, with_pay")
-    .eq("employee_id", employeeId).eq("with_pay", true);
+  const orig = origBalances(employeeId);
+  if (orig.vacation == null && orig.sick == null) return null;
 
   const now = new Date();
   const monthsShown = year < now.getFullYear() ? 12 : now.getMonth() + 1;
-  const ACC = 1.25;
-  const charge = (cat, m) => (events ?? [])
-    .filter((e) => e.charge_category === cat)
-    .filter((e) => new Date(`${e.event_date}T00:00:00`).getFullYear() === year && (m == null || new Date(`${e.event_date}T00:00:00`).getMonth() === m))
-    .reduce((s, e) => s + Number(e.equivalent_days || 0), 0);
-  const totVL = charge("vacation", null), totSL = charge("sick", null);
+  // Balance forwarded so that current-month balance (no charges) equals the seed.
+  let vl = round3((orig.vacation ?? 0) - monthsShown * MONTHLY_ACCRUAL);
+  let sl = round3((orig.sick ?? 0) - monthsShown * MONTHLY_ACCRUAL);
 
-  let vl = round3((balances.vacation ?? 0) - monthsShown * ACC + totVL);
-  let sl = round3((balances.sick ?? 0) - monthsShown * ACC + totSL);
-  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const rows = [{ period: "Balance forwarded", forward: true, vlBalance: vl, slBalance: sl, total: round3(vl + sl) }];
   for (let m = 0; m < monthsShown; m++) {
-    const vc = round3(charge("vacation", m)), sc = round3(charge("sick", m));
-    vl = round3(vl + ACC - vc); sl = round3(sl + ACC - sc);
-    rows.push({ period: `${MONTHS[m]} ${year}`, vlEarned: ACC, vlCharged: vc, vlBalance: vl, slEarned: ACC, slCharged: sc, slBalance: sl, total: round3(vl + sl) });
+    const vlChg = round3(chargesFor(employeeId, "vacation", { year, month: m }));
+    const slChg = round3(chargesFor(employeeId, "sick", { year, month: m }));
+    vl = round3(vl + MONTHLY_ACCRUAL - vlChg);
+    sl = round3(sl + MONTHLY_ACCRUAL - slChg);
+    rows.push({
+      period: `${MONTHS[m]} ${year}`,
+      vlEarned: MONTHLY_ACCRUAL, vlCharged: vlChg, vlBalance: vl,
+      slEarned: MONTHLY_ACCRUAL, slCharged: slChg, slBalance: sl,
+      total: round3(vl + sl),
+    });
   }
   return rows;
 }
 
-// ---------- review queue ----------
-export async function listMyPending() {
-  const { data, error } = await supabase.rpc("pending_applications");
-  if (error) throw error;
-  const ids = [...new Set((data ?? []).map((a) => a.leave_type_id))];
-  const { data: types } = await supabase.from("leave_types").select("id, name, category").in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
-  const nameOf = Object.fromEntries((types ?? []).map((t) => [t.id, t]));
-  return (data ?? []).map((a) => ({
-    id: a.id, applicantName: a.applicant_name,
-    leaveTypeName: nameOf[a.leave_type_id]?.name ?? "Leave",
-    category: nameOf[a.leave_type_id]?.category, isPaid: a.is_paid,
-    start: a.inclusive_start, end: a.inclusive_end, workingDays: Number(a.working_days),
-    filingDate: a.date_of_filing, status: a.status, approverExternal: a.approval_external,
-    deduction: a.deduction_amount != null ? Number(a.deduction_amount) : null, deductionHalf: a.deduction_half,
-  }));
-}
-export async function certifyCredits(id, approverExternal) {
-  const { error } = await supabase.from("leave_applications")
-    .update({ status: approverExternal ? "forwarded_ro" : "credits_certified", certified_at: new Date().toISOString() }).eq("id", id);
-  if (error) throw error;
-}
-export async function recommend(id) {
-  const { error } = await supabase.from("leave_applications").update({ status: "recommended", recommended_at: new Date().toISOString() }).eq("id", id);
-  if (error) throw error;
-}
-export async function decide(id, decision, remarks = "") {
-  const { error } = await supabase.from("leave_applications").update({ status: decision, decision_remarks: remarks, decided_at: new Date().toISOString() }).eq("id", id);
-  if (error) throw error;
-}
-export async function recordExternalDecision(id, decision, { channel, recordedById, remarks = "" }) {
-  const { error } = await supabase.from("leave_applications").update({
-    status: decision, approval_external: true, external_channel: channel,
-    decision_recorded_by: recordedById, decision_remarks: remarks, decided_at: new Date().toISOString(),
-  }).eq("id", id);
-  if (error) throw error;
+/** Applications awaiting a given seat's action. */
+export async function listPendingForSeat(seat) {
+  return clone(applications.filter((a) => !TERMINAL.includes(a.status) && pendingSeat(a) === seat));
 }
 
-// ---------- filing ----------
-export async function submitLeaveApplication(p) {
-  const { data, error } = await supabase.from("leave_applications").insert({
-    employee_id: p.employeeId, applicant_name: p.applicantName, position_snap: p.position,
-    emp_class_snap: p.empClass, salary_snap: p.salary ?? null, leave_type_id: p.leaveTypeId,
-    date_of_filing: p.filingDate, inclusive_start: p.start, inclusive_end: p.end,
-    working_days: p.workingDays, is_paid: p.isPaid, approval_external: p.approverExternal,
-    deduction_amount: p.deduction ?? null, deduction_half: p.deductionHalf ?? null,
-    details: p.purpose ? { purpose: p.purpose } : null, status: "submitted",
-  }).select().single();
-  if (error) throw error;
-  return { id: data.id, status: data.status };
+// ---------- writes (mock mutations) ----------
+function patch(id, changes) {
+  const i = applications.findIndex((a) => a.id === id);
+  if (i === -1) throw new Error(`Application not found: ${id}`);
+  applications[i] = { ...applications[i], ...changes };
+  return clone(applications[i]);
+}
+export async function certifyCredits(id) {
+  const app = applications.find((a) => a.id === id);
+  return patch(id, { status: app.approverExternal ? "forwarded_ro" : "credits_certified", certifiedAt: new Date().toISOString() });
+}
+export async function recommend(id) {
+  return patch(id, { status: "recommended", recommendedAt: new Date().toISOString() });
+}
+export async function decide(id, decision, remarks = "") {
+  return patch(id, { status: decision, decisionRemarks: remarks, decidedAt: new Date().toISOString() });
+}
+export async function recordExternalDecision(id, decision, { channel, recordedByName, remarks = "" }) {
+  return patch(id, {
+    status: decision, approvalExternal: true, externalChannel: channel,
+    decisionRecordedBy: recordedByName, decisionRemarks: remarks, decidedAt: new Date().toISOString(),
+  });
+}
+export async function submitLeaveApplication(payload) {
+  const saved = { id: crypto.randomUUID(), ...payload, status: "submitted" };
+  applications = [saved, ...applications];
+  return clone(saved);
 }
 
 // ---------- attendance ----------
-export async function postAttendanceEvent(p) {
-  const { data, error } = await supabase.from("attendance_events").insert({
-    employee_id: p.employeeId, event_date: p.date, type: p.type,
-    minutes: p.minutes ?? null, equivalent_days: p.equivalentDays,
-    with_pay: p.withPay, charge_category: p.chargeCategory ?? null, encoded_by: p.encodedById,
-  }).select().single();
-  if (error) throw error;
-  let balanceAfter = null;
-  if (p.withPay && p.chargeCategory) {
-    const { data: row } = await supabase.from("leave_balances").select("id, used, balance")
-      .eq("employee_id", p.employeeId).eq("category", p.chargeCategory).eq("period_label", "cumulative").maybeSingle();
-    if (row) {
-      await supabase.from("leave_balances").update({ used: Number(row.used) + p.equivalentDays }).eq("id", row.id);
-      balanceAfter = round3(Number(row.balance) - p.equivalentDays);
-    }
+/** Record a personnel pass / tardiness / undertime / absence (charges derive from this). */
+export async function postAttendanceEvent(payload) {
+  const saved = { id: crypto.randomUUID(), ...payload };
+  attendanceEvents = [saved, ...attendanceEvents];
+  if (payload.withPay && payload.chargeCategory) {
+    const b = await getBalances(payload.employeeId);
+    saved.balanceAfter = b[payload.chargeCategory];
   }
-  return { ...p, id: data.id, balanceAfter };
+  return clone(saved);
 }
 export async function listAttendanceEvents(employeeId) {
-  const { data, error } = await supabase.from("attendance_events")
-    .select("*").eq("employee_id", employeeId).order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []).map((e) => ({
-    id: e.id, date: e.event_date, type: e.type, minutes: e.minutes,
-    equivalentDays: Number(e.equivalent_days ?? 0), withPay: e.with_pay,
-    chargeCategory: e.charge_category, balanceAfter: null,
-  }));
+  return clone(attendanceEvents.filter((e) => e.employeeId === employeeId));
 }
 
-// ---------- accounts ----------
+// ---------- account approval (admin) ----------
 export async function listUnits() {
-  const { data, error } = await supabase.from("units").select("name").order("name");
-  if (error) throw error;
-  return data.map((u) => u.name);
+  return clone(units);
 }
 export async function listPendingAccounts() {
-  const { data, error } = await supabase.from("account_requests").select("*").eq("status", "pending").order("requested_at");
-  if (error) throw error;
-  return data.map((r) => ({ id: r.id, name: r.full_name, email: r.email, requestedAt: r.requested_at, authUserId: r.auth_user_id }));
+  return clone(accounts.filter((a) => a.status === "pending"));
 }
 export async function listProcessedAccounts() {
-  const { data, error } = await supabase.from("account_requests").select("*").neq("status", "pending").order("decided_at", { ascending: false }).limit(20);
-  if (error) return [];
-  return (data ?? []).map((r) => ({ id: r.id, name: r.full_name, email: r.email, status: r.status, empClass: r.emp_class ?? null, position: r.position ?? null }));
+  return clone(accounts.filter((a) => a.status !== "pending"));
 }
-export async function approveAccount(req, details) {
-  const toks = (req.name || req.email).trim().split(/\s+/);
-  const last = toks.length > 1 ? toks[toks.length - 1] : toks[0];
-  const first = toks.length > 1 ? toks.slice(0, -1).join(" ") : "";
-  const { data: unit } = await supabase.from("units").select("id").eq("name", details.unit).maybeSingle();
-  const { error: e1 } = await supabase.from("employees").insert({
-    email: req.email, auth_user_id: req.authUserId, employee_id_no: details.employeeIdNo,
-    last_name: last, first_name: first || last, emp_class: details.empClass, cosw_sub: details.coswSub,
-    position: details.position, unit_id: unit?.id ?? null, salary_grade: details.salaryGrade,
-    salary: details.monthlySalary, daily_wage: details.dailyWage, account_status: "approved", app_role: "staff",
-  });
-  if (e1) throw e1;
-  const { error: e2 } = await supabase.from("account_requests").update({ status: "approved", decided_at: new Date().toISOString() }).eq("id", req.id);
-  if (e2) throw e2;
+function patchAccount(id, changes) {
+  const i = accounts.findIndex((a) => a.id === id);
+  if (i === -1) throw new Error(`Account not found: ${id}`);
+  accounts[i] = { ...accounts[i], ...changes };
+  return clone(accounts[i]);
 }
-export async function rejectAccount(id) {
-  const { error } = await supabase.from("account_requests").update({ status: "rejected", decided_at: new Date().toISOString() }).eq("id", id);
-  if (error) throw error;
+/** Approve a sign-in and record the employee setup details. */
+export async function approveAccount(id, details) {
+  return patchAccount(id, { status: "approved", ...details, decidedAt: new Date().toISOString() });
+}
+export async function rejectAccount(id, reason = "") {
+  return patchAccount(id, { status: "rejected", rejectionReason: reason, decidedAt: new Date().toISOString() });
 }
