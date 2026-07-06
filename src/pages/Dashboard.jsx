@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { MONTHLY_ACCRUAL_DAYS, projectCredits } from "../lib/leaveRules";
 import { listEmployees, getBalances } from "../lib/leaveApi";
-import { useAuth } from "../context/AuthContext";
 import Icon from "../components/Icon";
 
 const YEAR = 2026;
 const fmt = (n) => (Math.round(n * 1000) / 1000).toLocaleString("en-PH");
 const quarterEnd = (m) => `${["Mar 31", "Jun 30", "Sep 30", "Dec 31"][Math.floor(m / 3)]}, ${YEAR}`;
+
 const ACCENT = {
   blue: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
   teal: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
@@ -14,49 +14,46 @@ const ACCENT = {
 };
 
 export default function Dashboard() {
-  const { employee, isHrOrAdmin } = useAuth();
   const [employees, setEmployees] = useState([]);
-  const [selectedId, setSelectedId] = useState(employee?.id ?? null);
+  const [selectedId, setSelectedId] = useState(null);
   const [balances, setBalances] = useState(null);
 
   useEffect(() => {
-    if (!isHrOrAdmin) return; // office staff only ever see themselves
-    listEmployees().then(setEmployees).catch(() => {});
-  }, [isHrOrAdmin]);
+    let ok = true;
+    listEmployees().then((emps) => { if (!ok) return; setEmployees(emps); setSelectedId(emps[0]?.id ?? null); });
+    return () => { ok = false; };
+  }, []);
 
   useEffect(() => {
-    const id = selectedId ?? employee?.id;
-    if (!id) return;
+    if (!selectedId) return;
     let ok = true; setBalances(null);
-    getBalances(id).then((b) => { if (ok) setBalances(b); }).catch(() => setBalances({}));
+    getBalances(selectedId).then((b) => { if (ok) setBalances(b); });
     return () => { ok = false; };
-  }, [selectedId, employee]);
+  }, [selectedId]);
 
-  const shown = employees.find((e) => e.id === (selectedId ?? employee?.id)) ?? employee;
-  const isAccruing = shown && (shown.empClass === "regular" || shown.empClass === "contractual");
+  const employee = employees.find((e) => e.id === selectedId) ?? null;
+  const isAccruing = employee && (employee.empClass === "regular" || employee.empClass === "contractual");
   const monthsLeft = useMemo(() => 11 - new Date().getMonth(), []);
   const projection = useMemo(() => {
     if (!isAccruing || !balances) return null;
     return { vacation: projectCredits(balances.vacation ?? 0, monthsLeft), sick: projectCredits(balances.sick ?? 0, monthsLeft) };
   }, [isAccruing, balances, monthsLeft]);
 
-  if (!shown || !balances) return <div className="p-6 text-sm text-slate-500 dark:text-slate-400">Loading…</div>;
+  if (!employee || !balances) return <div className="p-6 text-sm text-slate-500 dark:text-slate-400">Loading…</div>;
 
   return (
     <div className="mx-auto max-w-5xl p-6 lg:p-8">
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl font-bold text-slate-900 dark:text-white">Leave balances</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{shown.name} · {shown.position}</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{employee.name} · {employee.position}</p>
         </div>
-        {isHrOrAdmin && employees.length > 1 && (
-          <label className="text-sm">
-            <span className="mr-2 text-slate-500 dark:text-slate-400">Employee</span>
-            <select value={selectedId ?? employee?.id} onChange={(e) => setSelectedId(e.target.value)} className="ui-input px-3 py-1.5 text-sm">
-              {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
-            </select>
-          </label>
-        )}
+        <label className="text-sm">
+          <span className="mr-2 text-slate-500 dark:text-slate-400">Viewing as (demo)</span>
+          <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)} className="ui-input px-3 py-1.5 text-sm">
+            {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+          </select>
+        </label>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -95,7 +92,9 @@ export default function Dashboard() {
 function StatCard({ icon, accent, label, value, foot }) {
   return (
     <div className="ui-card flex items-start gap-4 p-5">
-      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${ACCENT[accent]}`}><Icon name={icon} className="h-5 w-5" /></span>
+      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${ACCENT[accent]}`}>
+        <Icon name={icon} className="h-5 w-5" />
+      </span>
       <div>
         <p className="font-heading text-3xl font-bold leading-none tabular-nums text-slate-900 dark:text-white">{value}</p>
         <p className="mt-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
@@ -104,6 +103,7 @@ function StatCard({ icon, accent, label, value, foot }) {
     </div>
   );
 }
+
 function ProjectionRow({ label, now, end }) {
   const gain = Math.round((end - now) * 1000) / 1000;
   return (

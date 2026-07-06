@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { minutesToDays } from "../lib/leaveRules";
 import { listEmployees, getBalances, postAttendanceEvent, listAttendanceEvents } from "../lib/leaveApi";
-import { useAuth } from "../context/AuthContext";
 
 const TYPES = [
   { value: "personnel_pass", label: "Personnel pass", unit: "none" },
@@ -15,7 +14,6 @@ const prettyDate = (s) => (s ? new Date(`${s}T00:00:00`).toLocaleDateString("en-
 const fmt = (n) => (Math.round(n * 1000) / 1000).toLocaleString("en-PH");
 
 export default function Attendance() {
-  const { employee: me } = useAuth();
   const [employees, setEmployees] = useState([]);
   const [employeeId, setEmployeeId] = useState(null);
   const [balances, setBalances] = useState(null);
@@ -63,7 +61,6 @@ export default function Attendance() {
     try {
       await postAttendanceEvent({
         employeeId,
-        encodedById: me?.id,
         date,
         type,
         minutes: unit === "minutes" ? Number(minutes) : null,
