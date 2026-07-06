@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { listPendingAccounts, listProcessedAccounts, listUnits, approveAccount, rejectAccount } from "../lib/leaveApi";
 
 const CLASS_LABEL = { regular: "Regular", contractual: "Contractual", cosw: "COSW" };
-const prettyDate = (s) => (s ? new Date(`${s}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "\u2014");
+const prettyDate = (s) => (s ? new Date(`${s}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "—");
 
 export default function Accounts() {
   const [pending, setPending] = useState(null);
@@ -85,7 +85,7 @@ function RequestCard({ req, units, onDone }) {
   const approve = async () => {
     setBusy(true);
     try {
-      await approveAccount(req.id, {
+      await approveAccount(req, {
         employeeIdNo: employeeIdNo.trim(),
         empClass,
         coswSub: isCosw ? coswSub : null,
@@ -165,7 +165,7 @@ function RequestCard({ req, units, onDone }) {
           <input value={salaryGrade} onChange={(e) => setSalaryGrade(e.target.value)} placeholder="e.g. SG 11 Step 1" className={field} />
         </div>
         <div>
-          <label className={label}>{`Rate — ${rateNeeded} (\u20B1)`}</label>
+          <label className={label}>{`Rate — ${rateNeeded} (₱)`}</label>
           {isCosw ? (
             <input type="number" min={0} value={rate} onChange={(e) => setRate(e.target.value)} className={field} />
           ) : (
