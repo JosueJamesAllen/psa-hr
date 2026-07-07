@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# local environment — real values live in Netlify env settings (see .env.example)
+.env
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
