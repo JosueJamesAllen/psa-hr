@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { IDLE_SIGNOUT_FLAG } from "../hooks/useIdleSignOut";
 import bgPic from "../assets/background-pic.jfif";
 import psaLogo from "../assets/forshtsandgiggles.png";
 
@@ -27,6 +29,14 @@ function GoogleIcon() {
 
 export default function LoginPage() {
   const { signInWithGoogle } = useAuth();
+  const [idleNotice, setIdleNotice] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem(IDLE_SIGNOUT_FLAG)) {
+      sessionStorage.removeItem(IDLE_SIGNOUT_FLAG);
+      setIdleNotice(true);
+    }
+  }, []);
 
   return (
     <div
@@ -68,6 +78,12 @@ export default function LoginPage() {
         <p className="mt-2 text-sm text-white/60">
           Sign in with your Google account to continue.
         </p>
+
+        {idleNotice && (
+          <p className="mt-4 rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-sm text-amber-200">
+            You were signed out after 30 minutes of inactivity. Please sign in again.
+          </p>
+        )}
 
         <button
           onClick={signInWithGoogle}
