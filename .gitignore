@@ -15,6 +15,10 @@ dist-ssr
 # local environment — real values live in Netlify env settings (see .env.example)
 .env
 
+# tooling scratch
+supabase/.temp
+deno.lock
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
