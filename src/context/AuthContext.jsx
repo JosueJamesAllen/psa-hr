@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { useIdleSignOut, IDLE_SIGNOUT_FLAG } from "../hooks/useIdleSignOut";
 
 const AuthContext = createContext(null);
 
@@ -40,6 +41,12 @@ export function AuthProvider({ children }) {
     });
     return () => subscription.unsubscribe();
   }, [bootstrap]);
+
+  const handleIdle = useCallback(() => {
+    sessionStorage.setItem(IDLE_SIGNOUT_FLAG, "1");
+    supabase.auth.signOut();
+  }, []);
+  useIdleSignOut(!!session, handleIdle);
 
   const role = employee?.app_role ?? null;
   const signInWithGoogle = () =>
