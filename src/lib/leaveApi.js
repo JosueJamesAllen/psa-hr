@@ -192,7 +192,7 @@ export async function listPendingAccounts() {
 export async function listProcessedAccounts() {
   const { data, error } = await supabase.from("account_requests").select("*").neq("status", "pending").order("decided_at", { ascending: false }).limit(20);
   if (error) return [];
-  return (data ?? []).map((r) => ({ id: r.id, name: r.full_name, email: r.email, status: r.status, empClass: r.emp_class ?? null, position: r.position ?? null }));
+  return (data ?? []).map((r) => ({ id: r.id, name: r.full_name, email: r.email, status: r.status, empClass: r.emp_class ?? null, position: r.position ?? null, remarks: r.decision_remarks ?? null }));
 }
 export async function approveAccount(req, details) {
   const toks = (req.name || req.email).trim().split(/\s+/);
@@ -209,7 +209,18 @@ export async function approveAccount(req, details) {
   const { error: e2 } = await supabase.from("account_requests").update({ status: "approved", decided_at: new Date().toISOString() }).eq("id", req.id);
   if (e2) throw e2;
 }
-export async function rejectAccount(id) {
-  const { error } = await supabase.from("account_requests").update({ status: "rejected", decided_at: new Date().toISOString() }).eq("id", id);
+export async function rejectAccount(id, remarks = "") {
+  const { error } = await supabase.from("account_requests").update({
+    status: "rejected", decided_at: new Date().toISOString(),
+    decision_remarks: remarks.trim() || null,
+  }).eq("id", id);
   if (error) throw error;
+  // notify the applicant by email; the rejection stands even if this fails
+  try {
+    const { error: fnError } = await supabase.functions.invoke("reject-account", { body: { requestId: id } });
+    if (fnError) throw fnError;
+    return { emailSent: true };
+  } catch {
+    return { emailSent: false };
+  }
 }

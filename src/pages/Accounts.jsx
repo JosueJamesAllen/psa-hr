@@ -8,6 +8,7 @@ export default function Accounts() {
   const [pending, setPending] = useState(null);
   const [processed, setProcessed] = useState([]);
   const [units, setUnits] = useState([]);
+  const [notice, setNotice] = useState(null);
 
   const refresh = () => {
     Promise.all([listPendingAccounts(), listProcessedAccounts()]).then(([p, pr]) => {
@@ -19,6 +20,7 @@ export default function Accounts() {
     listUnits().then(setUnits);
     refresh();
   }, []);
+  const onDone = (warning) => { setNotice(warning ?? null); refresh(); };
 
   return (
     <div className="mx-auto max-w-3xl p-6">
@@ -29,6 +31,12 @@ export default function Accounts() {
         </p>
       </header>
 
+      {notice && (
+        <p className="mb-4 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200">
+          {notice}
+        </p>
+      )}
+
       {pending === null ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
       ) : pending.length === 0 ? (
@@ -38,7 +46,7 @@ export default function Accounts() {
       ) : (
         <ul className="space-y-4">
           {pending.map((req) => (
-            <RequestCard key={req.id} req={req} units={units} onDone={refresh} />
+            <RequestCard key={req.id} req={req} units={units} onDone={onDone} />
           ))}
         </ul>
       )}
@@ -50,8 +58,8 @@ export default function Accounts() {
             {processed.map((a) => (
               <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 bg-white px-4 py-3 text-sm dark:bg-slate-900/40">
                 <span className="font-medium text-slate-800 dark:text-slate-200">{a.name}</span>
-                <span className="text-slate-500 dark:text-slate-400">
-                  {a.status === "approved" ? `${CLASS_LABEL[a.empClass] ?? ""} · ${a.position ?? ""}` : "rejected"}
+                <span className="min-w-0 flex-1 truncate text-slate-500 dark:text-slate-400" title={a.status !== "approved" ? a.remarks ?? "" : undefined}>
+                  {a.status === "approved" ? `${CLASS_LABEL[a.empClass] ?? ""} · ${a.position ?? ""}` : a.remarks || "No remarks given"}
                 </span>
                 <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${a.status === "approved" ? "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300" : "bg-red-100 text-psa-red dark:bg-red-950/50 dark:text-red-300"}`}>
                   {a.status === "approved" ? "Approved" : "Rejected"}
@@ -101,7 +109,16 @@ function RequestCard({ req, units, onDone }) {
       setBusy(false);
     }
   };
-  const reject = async () => { setBusy(true); try { await rejectAccount(req.id); onDone(); } finally { setBusy(false); } };
+  const [rejecting, setRejecting] = useState(false);
+  const [remarks, setRemarks] = useState("");
+  const reject = async () => {
+    setBusy(true);
+    try {
+      const { emailSent } = await rejectAccount(req.id, remarks);
+      onDone(emailSent ? null
+        : `${req.name || req.email} was rejected, but the notification email could not be sent — check the reject-account function setup.`);
+    } finally { setBusy(false); }
+  };
 
   const field = "ui-input mt-1 w-full px-3 py-2 text-sm";
   const label = "text-xs font-medium text-slate-500 dark:text-slate-400";
@@ -174,14 +191,37 @@ function RequestCard({ req, units, onDone }) {
         </div>
       </div>
 
-      <div className="mt-5 flex gap-2">
-        <button onClick={approve} disabled={!canApprove} className="rounded-lg bg-psa-blue px-4 py-2 text-sm font-semibold text-white transition hover:bg-psa-blue/90 focus:outline-none focus:ring-2 focus:ring-psa-blue/40 disabled:cursor-not-allowed disabled:opacity-40">
-          {busy ? "Saving…" : "Approve & create account"}
-        </button>
-        <button onClick={reject} disabled={busy} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-          Reject
-        </button>
-      </div>
+      {!rejecting ? (
+        <div className="mt-5 flex gap-2">
+          <button onClick={approve} disabled={!canApprove} className="rounded-lg bg-psa-blue px-4 py-2 text-sm font-semibold text-white transition hover:bg-psa-blue/90 focus:outline-none focus:ring-2 focus:ring-psa-blue/40 disabled:cursor-not-allowed disabled:opacity-40">
+            {busy ? "Saving…" : "Approve & create account"}
+          </button>
+          <button onClick={() => setRejecting(true)} disabled={busy} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+            Reject…
+          </button>
+        </div>
+      ) : (
+        <div className="mt-5 rounded-xl border border-red-200 bg-red-50/50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
+          <label className={label}>
+            Reasons for rejection <span className="font-normal text-slate-400">(emailed to the applicant)</span>
+          </label>
+          <textarea
+            value={remarks}
+            onChange={(e) => setRemarks(e.target.value)}
+            rows={3}
+            placeholder="e.g. We couldn't match your details to any current staff record."
+            className={field}
+          />
+          <div className="mt-3 flex gap-2">
+            <button onClick={reject} disabled={busy} className="rounded-lg bg-psa-red px-4 py-2 text-sm font-semibold text-white transition hover:bg-psa-red/90 focus:outline-none focus:ring-2 focus:ring-psa-red/40 disabled:opacity-40">
+              {busy ? "Rejecting…" : "Confirm rejection"}
+            </button>
+            <button onClick={() => { setRejecting(false); setRemarks(""); }} disabled={busy} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </li>
   );
 }
