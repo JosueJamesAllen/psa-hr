@@ -87,7 +87,12 @@ export default function Leaves() {
   const labelClass = "text-sm font-medium text-slate-700 dark:text-slate-300";
 
   if (!employee) return <div className="p-6 text-sm text-slate-500 dark:text-slate-400">Loading…</div>;
+  if (err && !types) return <div className="p-6 text-sm text-psa-red">Couldn't load the filing form: {err}</div>;
+  if (types && types.length === 0)
+    return <div className="p-6 text-sm text-slate-500 dark:text-slate-400">No leave types are configured for your employment class. Please contact HR.</div>;
   if (!types || !leaveType || !routing) return <div className="p-6 text-sm text-slate-500 dark:text-slate-400">Loading…</div>;
+  if (!routing.approver)
+    return <div className="p-6 text-sm text-psa-red">Signatory seats aren't fully configured (no approver found), so leaves can't be filed yet. Please contact HR.</div>;
 
   return (
     <div className="mx-auto max-w-5xl p-6 lg:p-8">

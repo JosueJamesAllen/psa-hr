@@ -6,7 +6,7 @@ import { supabase } from "./supabaseClient";
 const fullName = (r) => [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(" ");
 const round3 = (n) => Math.round((n + Number.EPSILON) * 1000) / 1000;
 
-function mapEmployee(r) {
+export function mapEmployee(r) {
   return {
     id: r.id, employeeIdNo: r.employee_id_no, name: fullName(r),
     firstName: r.first_name, lastName: r.last_name, middleName: r.middle_name,
@@ -72,9 +72,10 @@ export async function getLeaveCard(employeeId, year) {
   const balances = await getBalances(employeeId);
   if (balances.vacation == null && balances.sick == null) return null; // COSW: no VL/SL card
 
-  const { data: events } = await supabase.from("attendance_events")
+  const { data: events, error: evError } = await supabase.from("attendance_events")
     .select("event_date, equivalent_days, charge_category, with_pay")
     .eq("employee_id", employeeId).eq("with_pay", true);
+  if (evError) throw evError; // silently treating this as "no charges" would show wrong balances
 
   const now = new Date();
   const monthsShown = year < now.getFullYear() ? 12 : now.getMonth() + 1;

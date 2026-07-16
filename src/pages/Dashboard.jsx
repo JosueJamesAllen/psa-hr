@@ -4,7 +4,7 @@ import { listEmployees, getBalances } from "../lib/leaveApi";
 import { useAuth } from "../context/AuthContext";
 import Icon from "../components/Icon";
 
-const YEAR = 2026;
+const YEAR = new Date().getFullYear();
 const fmt = (n) => (Math.round(n * 1000) / 1000).toLocaleString("en-PH");
 const quarterEnd = (m) => `${["Mar 31", "Jun 30", "Sep 30", "Dec 31"][Math.floor(m / 3)]}, ${YEAR}`;
 const ACCENT = {
@@ -18,17 +18,20 @@ export default function Dashboard() {
   const [employees, setEmployees] = useState([]);
   const [selectedId, setSelectedId] = useState(employee?.id ?? null);
   const [balances, setBalances] = useState(null);
+  const [err, setErr] = useState(null);
 
   useEffect(() => {
     if (!isHrOrAdmin) return; // office staff only ever see themselves
-    listEmployees().then(setEmployees).catch(() => {});
+    listEmployees().then(setEmployees).catch((e) => console.error("listEmployees failed", e));
   }, [isHrOrAdmin]);
 
   useEffect(() => {
     const id = selectedId ?? employee?.id;
     if (!id) return;
-    let ok = true; setBalances(null);
-    getBalances(id).then((b) => { if (ok) setBalances(b); }).catch(() => setBalances({}));
+    let ok = true; setBalances(null); setErr(null);
+    getBalances(id)
+      .then((b) => { if (ok) setBalances(b); })
+      .catch((e) => { if (ok) { setErr(e.message); setBalances({}); } });
     return () => { ok = false; };
   }, [selectedId, employee]);
 
@@ -58,6 +61,12 @@ export default function Dashboard() {
           </label>
         )}
       </header>
+
+      {err && (
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-psa-red dark:bg-red-950/40 dark:text-red-300">
+          Couldn't load balances: {err}
+        </p>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {isAccruing && (

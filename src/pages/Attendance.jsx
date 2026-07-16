@@ -28,6 +28,7 @@ export default function Attendance() {
   const [withPay, setWithPay] = useState(true);
   const [chargeCategory, setChargeCategory] = useState("vacation");
   const [posting, setPosting] = useState(false);
+  const [err, setErr] = useState(null);
 
   useEffect(() => {
     let ok = true;
@@ -35,12 +36,14 @@ export default function Attendance() {
       if (!ok) return;
       setEmployees(emps);
       setEmployeeId(emps[0]?.id ?? null);
-    });
+    }).catch((e) => { if (ok) setErr(e.message); });
     return () => { ok = false; };
   }, []);
 
   const reload = (id) => {
-    Promise.all([getBalances(id), listAttendanceEvents(id)]).then(([b, e]) => { setBalances(b); setEvents(e); });
+    Promise.all([getBalances(id), listAttendanceEvents(id)])
+      .then(([b, e]) => { setBalances(b); setEvents(e); })
+      .catch((e) => setErr(e.message));
   };
   useEffect(() => { if (employeeId) reload(employeeId); }, [employeeId]);
 
@@ -59,7 +62,7 @@ export default function Attendance() {
 
   const handlePost = async () => {
     if (!canPost) return;
-    setPosting(true);
+    setPosting(true); setErr(null);
     try {
       await postAttendanceEvent({
         employeeId,
@@ -74,6 +77,8 @@ export default function Attendance() {
       reload(employeeId);
       setMinutes(0);
       setDays(1);
+    } catch (e) {
+      setErr(e.message); // otherwise a failed insert (e.g. RLS) is invisible
     } finally {
       setPosting(false);
     }
@@ -83,7 +88,11 @@ export default function Attendance() {
     "ui-input mt-1 w-full px-3 py-2 text-sm";
   const labelClass = "text-sm font-medium text-slate-700 dark:text-slate-300";
 
-  if (!employee) return <div className="p-6 text-sm text-slate-500 dark:text-slate-400">Loading…</div>;
+  if (!employee) {
+    return err
+      ? <div className="p-6 text-sm text-psa-red">Couldn't load employees: {err}</div>
+      : <div className="p-6 text-sm text-slate-500 dark:text-slate-400">Loading…</div>;
+  }
 
   return (
     <div className="mx-auto max-w-4xl p-6">
@@ -94,7 +103,7 @@ export default function Attendance() {
         </div>
         <label className="text-sm">
           <span className="mr-2 text-slate-500 dark:text-slate-400">Employee</span>
-          <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} className="ui-input px-3 py-1.5 text-sm">
+          <select value={employeeId ?? ""} onChange={(e) => setEmployeeId(e.target.value)} className="ui-input px-3 py-1.5 text-sm">
             {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
           </select>
         </label>
@@ -111,6 +120,7 @@ export default function Attendance() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
         <div className="space-y-5 ui-card p-6">
+          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-psa-red dark:bg-red-950/40 dark:text-red-300">{err}</p>}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="type" className={labelClass}>Type</label>
@@ -204,7 +214,9 @@ export default function Attendance() {
                   {e.equivalentDays > 0 ? ` · ${fmt(e.equivalentDays)} day` : ""}
                 </span>
                 <span className="text-slate-500 dark:text-slate-400">
-                  {e.withPay ? `charged to ${e.chargeCategory === "vacation" ? "VL" : "SL"} → ${fmt(e.balanceAfter)}` : "no charge"}
+                  {e.withPay
+                    ? `charged to ${e.chargeCategory === "vacation" ? "VL" : "SL"}${e.balanceAfter != null ? ` → ${fmt(e.balanceAfter)}` : ""}`
+                    : "no charge"}
                 </span>
               </li>
             ))}

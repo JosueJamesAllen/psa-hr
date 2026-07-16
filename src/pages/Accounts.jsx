@@ -14,10 +14,10 @@ export default function Accounts() {
     Promise.all([listPendingAccounts(), listProcessedAccounts()]).then(([p, pr]) => {
       setPending(p);
       setProcessed(pr);
-    });
+    }).catch((e) => { setNotice(`Couldn't load account requests: ${e.message}`); setPending((prev) => prev ?? []); });
   };
   useEffect(() => {
-    listUnits().then(setUnits);
+    listUnits().then(setUnits).catch((e) => setNotice(`Couldn't load units: ${e.message}`));
     refresh();
   }, []);
   const onDone = (warning) => { setNotice(warning ?? null); refresh(); };
@@ -105,6 +105,8 @@ function RequestCard({ req, units, onDone }) {
         dailyWage: isCosw && payBasis === "daily" ? Number(rate) : null,
       });
       onDone();
+    } catch (e) {
+      onDone(`Couldn't approve ${req.name || req.email}: ${e.message}`);
     } finally {
       setBusy(false);
     }
@@ -117,6 +119,8 @@ function RequestCard({ req, units, onDone }) {
       const { emailSent } = await rejectAccount(req.id, remarks);
       onDone(emailSent ? null
         : `${req.name || req.email} was rejected, but the notification email could not be sent — check the reject-account function setup.`);
+    } catch (e) {
+      onDone(`Couldn't reject ${req.name || req.email}: ${e.message}`);
     } finally { setBusy(false); }
   };
 

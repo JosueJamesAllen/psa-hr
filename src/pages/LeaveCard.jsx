@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { listEmployees, getLeaveCard, getBalances } from "../lib/leaveApi";
 import { useAuth } from "../context/AuthContext";
 
-const YEAR = 2026;
+const YEAR = new Date().getFullYear();
 const fmt = (n) => (n == null ? "" : (Math.round(n * 1000) / 1000).toLocaleString("en-PH"));
 
 export default function LeaveCard() {
@@ -11,14 +11,19 @@ export default function LeaveCard() {
   const [selectedId, setSelectedId] = useState(employee?.id ?? null);
   const [rows, setRows] = useState(undefined);
   const [balances, setBalances] = useState(null);
+  const [err, setErr] = useState(null);
 
-  useEffect(() => { if (isHrOrAdmin) listEmployees().then(setEmployees).catch(() => {}); }, [isHrOrAdmin]);
+  useEffect(() => {
+    if (isHrOrAdmin) listEmployees().then(setEmployees).catch((e) => console.error("listEmployees failed", e));
+  }, [isHrOrAdmin]);
 
   useEffect(() => {
     const id = selectedId ?? employee?.id;
     if (!id) return;
-    let ok = true; setRows(undefined);
-    Promise.all([getLeaveCard(id, YEAR), getBalances(id)]).then(([r, b]) => { if (ok) { setRows(r); setBalances(b); } });
+    let ok = true; setRows(undefined); setErr(null);
+    Promise.all([getLeaveCard(id, YEAR), getBalances(id)])
+      .then(([r, b]) => { if (ok) { setRows(r); setBalances(b); } })
+      .catch((e) => { if (ok) setErr(e.message); });
     return () => { ok = false; };
   }, [selectedId, employee]);
 
@@ -42,7 +47,9 @@ export default function LeaveCard() {
         )}
       </header>
 
-      {rows === undefined ? (
+      {err ? (
+        <p className="text-sm text-psa-red">Couldn't load the leave card: {err}</p>
+      ) : rows === undefined ? (
         <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
       ) : rows === null ? (
         <div className="ui-card-soft p-6 text-sm text-slate-600 dark:text-slate-300">
