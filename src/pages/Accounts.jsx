@@ -1,14 +1,30 @@
 import { useEffect, useState } from "react";
-import { listPendingAccounts, listProcessedAccounts, listUnits, approveAccount, rejectAccount } from "../lib/leaveApi";
+import { listPendingAccounts, listProcessedAccounts, listUnits, approveAccount, rejectAccount, clearProcessedAccounts } from "../lib/leaveApi";
+import { useAuth } from "../context/AuthContext";
 
 const CLASS_LABEL = { regular: "Regular", contractual: "Contractual", cosw: "COSW" };
 const prettyDate = (s) => (s ? new Date(`${s}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "—");
 
 export default function Accounts() {
+  const { isAdmin } = useAuth();
   const [pending, setPending] = useState(null);
   const [processed, setProcessed] = useState([]);
   const [units, setUnits] = useState([]);
   const [notice, setNotice] = useState(null);
+  const [clearing, setClearing] = useState(false); // false | "confirm" | "busy"
+
+  const clearLog = async () => {
+    setClearing("busy"); setNotice(null);
+    try {
+      const removed = await clearProcessedAccounts();
+      if (removed === 0) setNotice("Nothing was cleared — the delete policy may not be applied yet, or you don't have permission.");
+    } catch (e) {
+      setNotice(`Couldn't clear the log: ${e.message}`);
+    } finally {
+      setClearing(false);
+      refresh();
+    }
+  };
 
   const refresh = () => {
     Promise.all([listPendingAccounts(), listProcessedAccounts()]).then(([p, pr]) => {
@@ -53,7 +69,26 @@ export default function Accounts() {
 
       {processed.length > 0 && (
         <section className="mt-8">
-          <h2 className="font-heading text-lg font-semibold text-slate-900 dark:text-white">Processed this session</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-heading text-lg font-semibold text-slate-900 dark:text-white">Processed this session</h2>
+            {isAdmin && (
+              clearing === "confirm" ? (
+                <span className="flex items-center gap-2 text-sm">
+                  <span className="text-slate-500 dark:text-slate-400">Delete all {processed.length} entries?</span>
+                  <button onClick={clearLog} className="rounded-lg bg-psa-red px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-psa-red/90 focus:outline-none focus:ring-2 focus:ring-psa-red/40">
+                    Clear log
+                  </button>
+                  <button onClick={() => setClearing(false)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    Cancel
+                  </button>
+                </span>
+              ) : (
+                <button onClick={() => setClearing("confirm")} disabled={clearing === "busy"} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                  {clearing === "busy" ? "Clearing…" : "Clear log…"}
+                </button>
+              )
+            )}
+          </div>
           <ul className="mt-3 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
             {processed.map((a) => (
               <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 bg-white px-4 py-3 text-sm dark:bg-slate-900/40">

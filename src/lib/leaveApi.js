@@ -210,6 +210,14 @@ export async function approveAccount(req, details) {
   const { error: e2 } = await supabase.from("account_requests").update({ status: "approved", decided_at: new Date().toISOString() }).eq("id", req.id);
   if (e2) throw e2;
 }
+export async function clearProcessedAccounts() {
+  // Returns how many rows were actually removed — RLS silently skips rows the
+  // caller may not delete, so 0 with a non-empty log means missing permission.
+  const { data, error } = await supabase.from("account_requests")
+    .delete().neq("status", "pending").select("id");
+  if (error) throw error;
+  return (data ?? []).length;
+}
 export async function rejectAccount(id, remarks = "") {
   const { error } = await supabase.from("account_requests").update({
     status: "rejected", decided_at: new Date().toISOString(),
